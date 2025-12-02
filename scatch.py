@@ -4,17 +4,19 @@ import os
 from os import listdir
 import asyncio
 import aiohttp
+from typing import List
 
 
-def retreive_images_links():
-    """Open images_download_list.txt file
+def retreive_images_links(
+    wishlist_file: str = "whishlist.txt",
+) -> List[str]:
+    """Open wishlist.txt file
     Return: list of images links url
     """
-    file_name = "images_download_list.txt"
-    if not os.path.exists(file_name):
+    if not os.path.exists(wishlist_file):
         raise Exception("Create images_download_list.txt with 1 link per line")
 
-    with open(file_name, "r") as f:
+    with open(wishlist_file, "r") as f:
         # line.strip() -> remove spaces at the beginning and at the end of the string
         # file.readlines() -> return list containing each line in the file as a list item
         links = [line.strip() for line in f.readlines() if line.strip()]
