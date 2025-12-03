@@ -273,7 +273,6 @@ async def download_imgs(
 ) -> str:
     with open(src_file_name) as f:
         reader = csv.DictReader(f, delimiter=",")
-        reader.__next__()
         ids_stats_urls = list(reader)
 
     dl_semaphore = asyncio.Semaphore(DOWNLOAD_LIMIT)
