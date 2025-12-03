@@ -63,28 +63,29 @@ def monitor_clipboard(conditions: List[FunctionType] = [is_wallhaven]) -> None:
     captured_urls = []
 
     try:
-        # Get current clipboard content
-        current_clipboard = pyperclip.paste()
+        while True:
+            # Get current clipboard content
+            current_clipboard = pyperclip.paste()
 
-        # Check if clipboard changed and contains a URL
-        if current_clipboard != last_clipboard:
-            if is_url(current_clipboard):
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                print(f"[{timestamp}] Captured: {current_clipboard}")
-                for condition in conditions:
-                    if condition(current_clipboard):
-                        captured_urls.append(
-                            {"timestamp": timestamp, "url": current_clipboard}
-                        )
-                    else:
-                        print(
-                            f"[URL_Conditions] {current_clipboard} Does not match with {condition.__doc__} Condition!"
-                        )
+            # Check if clipboard changed and contains a URL
+            if current_clipboard != last_clipboard:
+                if is_url(current_clipboard):
+                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    print(f"[{timestamp}] Captured: {current_clipboard}")
+                    for condition in conditions:
+                        if condition(current_clipboard):
+                            captured_urls.append(
+                                {"timestamp": timestamp, "url": current_clipboard}
+                            )
+                        else:
+                            print(
+                                f"[URL_Conditions] {current_clipboard} Does not match with {condition.__doc__} Condition!"
+                            )
 
-            last_clipboard = current_clipboard
+                last_clipboard = current_clipboard
 
-        # Check every 0.5 seconds instead of constant capturing
-        time.sleep(0.5)
+            # Check every 0.5 seconds instead of constant capturing
+            time.sleep(0.5)
 
     # End Capture Session with Ctl-C -> capture that moment
     except KeyboardInterrupt:
@@ -142,7 +143,7 @@ def retrieve_image_ids(
 ) -> List[str]:
     """read wishlist.txt file and extract image ids from url"""
     if not os.path.exists(wishlist_file):
-        raise Exception("Create wishlist.txt with 1 link per line")
+        raise Exception("There is no wishlist.txt, means you didn't captured any link")
 
     with open(wishlist_file) as f:
         ids = [line.strip().split("/")[-1] for line in f.readlines() if line.strip()]
@@ -216,7 +217,7 @@ async def get_img_srcs_batched(
         with open(file_name, "w") as f:
             print(f"[INFO] Writing {file_name}")
             writer = csv.writer(f)
-            writer.writerow(["id", "status", "src"])  # Header
+            writer.writerow(["id", "status", "url"])  # Header
             writer.writerows(all_urls)
 
     return file_name
@@ -226,12 +227,14 @@ async def download_single_img(
     client: aiohttp.ClientSession, url: str, id: str, semaphore: asyncio.Semaphore
 ) -> Tuple[str, str, str]:
     download_status = "0"
-    time_out = aiohttp.ClientTimeout(total=15)
+    time_out = aiohttp.ClientTimeout(total=60)
     async with semaphore:
         try:
             print(f"[DL] Downloading {id}")
             async with client.get(
-                url, timeout=time_out, allow_redirects=True
+                url,
+                timeout=time_out,
+                allow_redirects=True,
             ) as response:
                 if response.status != 200:
                     print(f"[DL] ✗ Saved {id} - Status {response.status}")
@@ -279,7 +282,7 @@ async def download_imgs(
         coroutines = [
             download_single_img(
                 client=client,
-                url=id_stat_url["src"],
+                url=id_stat_url["url"],
                 id=id_stat_url["id"],
                 semaphore=dl_semaphore,
             )
@@ -304,8 +307,73 @@ async def download_imgs(
     return download_status_file
 
 
+def clean_wishlist(
+    orig_file: str = "wishlist.txt",
+    download_stat_file: str = "status_wishlist.csv",
+    src_file_name: str = "src_wishlist.csv",
+    failed_file: str = "fails.txt",
+    orig_file_remove: bool = True,
+    download_stat_file_remove: bool = True,
+    src_file_name_remove: bool = True,
+):
+    failure_ids = []
+    failed_rows = []
+    failure_download = []
+    print("[CLEANING] Initiated!")
+    print(f"[CHECKING] {download_stat_file}")
+    if exists(download_stat_file):
+        print("[CLEANING] Capturing Failores dowload_stat file")
+        with open(download_stat_file) as d:
+            reader = csv.DictReader(d)
+            for row in reader:
+                if row["download_status"] != "1":
+                    print(f"[Failures] this {row['url']} with {row['download_status']}")
+                    failure_ids.append(row)
+                    failure_download.append(row)
+        if download_stat_file_remove:
+            os.remove(download_stat_file)
+            print("[REMOVED] dowload_stat removed")
+
+    print(f"[CHECKING] {src_file_name}")
+    if exists(src_file_name):
+        print("[CLEANING] Capturing Failores src_wishlist file")
+        with open(src_file_name) as s:
+            reader = csv.DictReader(s)
+            for row in reader:
+                if row["status"] != "200":
+                    failure_ids.append(row)
+                    print(f"[FAILURES] this {row['url']} with {'status'}")
+        if src_file_name_remove:
+            os.remove(src_file_name)
+            print("[REMOVED] src_wishlist removed")
+
+    failure_ids = [i["id"] for i in failure_ids]
+
+    print(f"[CHECKING] {orig_file}")
+    if exists(orig_file):
+        with open(orig_file) as o:
+            for row in o.readlines():
+                id = row.strip().split(" ")[-1].split("/")[-1]
+                if id in failure_ids:
+                    print(f"[CAPTURED] Failure with {id}")
+                    failed_rows.append(row)
+        if orig_file_remove:
+            os.remove(orig_file)
+            print("[REMOVED] wishlist removed")
+
+    if failed_rows:
+        if exists(failed_file):
+            with open(failed_file, "a") as f:
+                f.writelines(failed_rows)
+        else:
+            with open(failed_file, "w") as f:
+                f.writelines(failed_rows)
+
+
 if __name__ == "__main__":
+    print("[INFO] Creating/Created Wallhaven directory within script folder")
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
     print("[INFO] Capturing Clipboard, Ctrl-C to exit")
     monitor_clipboard()
 
@@ -324,3 +392,6 @@ if __name__ == "__main__":
 
     print("[INFO] Downloading image URLs from API (45 requests per 60 seconds)")
     downloading = asyncio.run(download_imgs())
+
+    print("[INFO] Downloading image URLs from API (45 requests per 60 seconds)")
+    clean_wishlist()
