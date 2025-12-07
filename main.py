@@ -123,24 +123,24 @@ def concatenate_clipboard_files(
     failed_file: str = "fails.txt",
 ) -> None:
     """Gather all captured_url files and make a single whishlist.txt file and remove captured_urls_ files"""
-    all_wallhaven_urls = []
+    all_wallhaven_urls = set()
     if captured_url_files is not None:
         for captured_url in captured_url_files:
             with open(captured_url) as c:
-                all_wallhaven_urls.extend(c.readlines())
+                all_wallhaven_urls.update(c.readlines())
                 os.remove(captured_url)
 
     if exists(failed_file):
         with open(failed_file) as f:
-            all_wallhaven_urls.extend(f.readlines())
+            all_wallhaven_urls.update(f.readlines())
             os.remove(failed_file)
 
-        if exists(wishlist_file):
-            with open(wishlist_file, "a") as w:
-                w.writelines(all_wallhaven_urls)
-        else:
-            with open(wishlist_file, "w") as w:
-                w.writelines(all_wallhaven_urls)
+    if exists(wishlist_file):
+        with open(wishlist_file, "a") as w:
+            w.writelines(all_wallhaven_urls)
+    else:
+        with open(wishlist_file, "w") as w:
+            w.writelines(all_wallhaven_urls)
 
     return None
 
