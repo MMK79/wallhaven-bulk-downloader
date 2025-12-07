@@ -45,7 +45,7 @@ def is_url(text) -> bool:
 
 def is_wallhaven(text) -> bool:
     "Only Accept Wallhaven URLs"
-    if "wallhaven" in text:
+    if "https://wallhaven.cc/w/" in text:
         return True
     return False
 
@@ -118,7 +118,9 @@ def get_all_captured_url_files() -> List[str] | None:
 
 
 def concatenate_clipboard_files(
-    captured_url_files: List[str] | None, wishlist_file: str = "wishlist.txt"
+    captured_url_files: List[str] | None,
+    wishlist_file: str = "wishlist.txt",
+    failed_file: str = "fails.txt",
 ) -> None:
     """Gather all captured_url files and make a single whishlist.txt file and remove captured_urls_ files"""
     all_wallhaven_urls = []
@@ -127,6 +129,11 @@ def concatenate_clipboard_files(
             with open(captured_url) as c:
                 all_wallhaven_urls.extend(c.readlines())
                 os.remove(captured_url)
+
+    if exists(failed_file):
+        with open(failed_file) as f:
+            all_wallhaven_urls.extend(f.readlines())
+            os.remove(failed_file)
 
         if exists(wishlist_file):
             with open(wishlist_file, "a") as w:

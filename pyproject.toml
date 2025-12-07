@@ -1,0 +1,12 @@
+[project]
+name = "wallhaven-downloader"
+version = "0.1.0"
+description = "Downloading images from Wallhaven but in a automated way"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiofiles>=25.1.0",
+    "aiohttp>=3.13.2",
+    "aiolimiter>=1.2.1",
+    "pyperclip>=1.11.0",
+]
