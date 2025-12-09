@@ -295,7 +295,7 @@ async def download_imgs(
             for id_stat_url in ids_stats_urls
             if id_stat_url["status"] == "200"
         ]
-        print("[INFO] Fuck it! Downloading!")
+        print("[INFO] Downloading!")
         results = await asyncio.gather(*coroutines, return_exceptions=False)
 
         if exists(download_status_file):
