@@ -1,32 +1,25 @@
-import os
 import asyncio
+import csv
+import glob
+import os
+import re
+import time
+from datetime import datetime
 from os.path import exists
+from pathlib import Path
+from types import FunctionType
+from typing import List, Tuple
+
 import aiofiles
 import aiohttp
-from aiolimiter import AsyncLimiter
-from pathlib import Path
-from typing import List, Tuple
-import glob
-import csv
-
-# Other solution
-# from pandas.io.clipboard import clipboard_get
-from types import FunctionType
 import pyperclip
-import time
+from aiolimiter import AsyncLimiter
 
-# work with regax
-import re
-from datetime import datetime
-
-
-# Configuration
 DOWNLOAD_LIMIT = 4
 CPU_WORKERS = os.cpu_count()
 DOWNLOAD_DIR = Path("wallhaven_download")
 API_ADDRESS = "https://wallhaven.cc/api/v1/w/"
 API_CALL_LIMIT = AsyncLimiter(max_rate=45, time_period=60)
-# API_CALL_LIMIT = AsyncLimiter(max_rate=5, time_period=60)
 
 
 def is_url(text: str) -> bool:
@@ -64,10 +57,7 @@ def monitor_clipboard(conditions: List[FunctionType] = [is_wallhaven]) -> None:
 
     try:
         while True:
-            # Get current clipboard content
             current_clipboard = pyperclip.paste()
-
-            # Check if clipboard changed and contains a URL
             if current_clipboard != last_clipboard:
                 if is_url(current_clipboard):
                     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -83,11 +73,8 @@ def monitor_clipboard(conditions: List[FunctionType] = [is_wallhaven]) -> None:
                             )
 
                 last_clipboard = current_clipboard
-
-            # Check every 0.5 seconds instead of constant capturing
             time.sleep(0.5)
 
-    # End Capture Session with Ctl-C -> capture that moment
     except KeyboardInterrupt:
         print("\n\n=== Monitoring Stopped ===")
         print(f"\nTotal URLs captured: {len(captured_urls)}")
@@ -97,7 +84,6 @@ def monitor_clipboard(conditions: List[FunctionType] = [is_wallhaven]) -> None:
             for i, item in enumerate(captured_urls, 1):
                 print(f"{i}. [{item['timestamp']}] {item['url']}")
 
-            # Optionally save to file
             save = input("\nSave to file? (y/n): ").lower()
             if save == "y":
                 filename = (
@@ -224,7 +210,7 @@ async def get_img_srcs_batched(
         with open(file_name, "w") as f:
             print(f"[INFO] Writing {file_name}")
             writer = csv.writer(f)
-            writer.writerow(["id", "status", "url"])  # Header
+            writer.writerow(["id", "status", "url"])
             writer.writerows(all_urls)
 
     return file_name
