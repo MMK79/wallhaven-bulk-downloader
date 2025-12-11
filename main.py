@@ -29,7 +29,7 @@ API_CALL_LIMIT = AsyncLimiter(max_rate=45, time_period=60)
 # API_CALL_LIMIT = AsyncLimiter(max_rate=5, time_period=60)
 
 
-def is_url(text) -> bool:
+def is_url(text: str) -> bool:
     """Check if the text is a valid URL"""
     url_pattern = re.compile(
         r"^https?://"  # http:// or https://
@@ -43,7 +43,7 @@ def is_url(text) -> bool:
     return url_pattern.match(text) is not None
 
 
-def is_wallhaven(text) -> bool:
+def is_wallhaven(text: str) -> bool:
     "Only Accept Wallhaven URLs"
     if "https://wallhaven.cc/w/" in text:
         return True
